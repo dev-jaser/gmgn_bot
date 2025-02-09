@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import LocalOutlierFactor
+import sqlite3
 from config import Config
 from datetime import datetime
 
@@ -20,14 +21,24 @@ class AlphaPatternMatcher:
         self.feature_matrix = None
         self._load_historical_patterns()
 
-    def _load_historical_patterns(self):
-        """ Load successful patterns from DB """
+# In core/pattern_matcher.py
+
+
+def _load_historical_patterns(self):
+    """Load successful patterns from DB"""
+    try:
         with Config.db_connection(Config.PATTERN_DB) as conn:
             df = pd.read_sql(
-                "SELECT features, profitability FROM patterns"
+                "SELECT features, profitability FROM patterns "
                 "WHERE created_at > DATE('now', '-30 days')",
                 conn
             )
+    except sqlite3.OperationalError as e:
+        if "no such table" in str(e):
+            print("First-time setup needed! Run: python scripts/setup_db.py")
+            df = pd.DataFrame()
+        else:
+            raise e
         if not df.empty:
             self.feature_matrix = np.stack(
                 df['features'].apply(np.frombuffer)

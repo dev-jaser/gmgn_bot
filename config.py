@@ -44,7 +44,7 @@ class Config:
     @classmethod
     def db_connection(cls, db_path: Path) -> sqlite3.Connection:
         """ Institutional DB connection with WAL mode. """
-        conn = sqlite3.connect(db_path, timout=cls.DB_TIMEOUT)
+        conn = sqlite3.connect(db_path, timeout=cls.DB_TIMEOUT)
         conn.execute('PRAGMA journal_mode=WAL')
         conn.execute('PRAGMA synchronous=NORMAL')
         return conn
