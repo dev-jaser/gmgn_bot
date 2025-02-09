@@ -2,7 +2,7 @@
 """ Professional-grade data processing pipeline. """
 import json
 import asyncio
-import websockets
+from websockets import connect
 from datetime import datetime
 from config import Config
 import logging
@@ -13,28 +13,28 @@ class GmgnDataEngine:
     """ Institutional-grade market data processing pipeline. """
 
     def __init__(self):
-        self.logger = logging.getLogger(__data_engine__)
+        self.logger = logging.getLogger('data_engine')
         self.__setup_metrics()
 
-    def __startup_metrics(self):
+    def __setup_metrics(self):
         """ Preallocate memory for high-frequency data. """
         self.token_cache = {}  # {address: (price_series, volume_series)}
         self.volatility_cache = np.empty((1000,), dtype=np.float32)
-        self.__current_vol_idx = 0
+        self._current_vol_idx = 0
 
     async def ingest_stream(self):
         """ Wallstreet-grade Websocket manager. """
         backoff = Config.WS_RECONNECT_DELAY
         while True:
             try:
-                async with websockets.connect(
+                async with connect(
                     Config.GMGN_WA_URL,
                     ping_interval=Config.WS_TIMEOUT - 2
                 ) as ws:
                     backoff = Config.WS_RECONNECT_DELAY  # Reset backoff
                     await self._process_messages(ws)
             except Exception as e:
-                self.logger.error(f"WS Error: {e}, retrying in {backoff}s.")
+                self.logger.error("WS Error: %s, retrying in %ss.", e, backoff)
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 60)  # Exponential backoff
 
@@ -48,7 +48,7 @@ class GmgnDataEngine:
                 elif data['type'] == 'heartbeat':
                     self._update_volatility(data)
             except Exception as e:
-                self.logger.error(f"Message Processing Failed: {e}")
+                self.logger.error("Message Processing Failed: %s", e)
 
     async def _handle_token_update(self, data):
         """ Professional data normalization """
